@@ -1,5 +1,5 @@
-TF_INC ?= `python -c 'import tensorflow as tf; print(tf.sysconfig.get_include())'`
-# TF_INC ?= /usr/local/lib/python2.7/dist-packages/tensorflow/include
+TF_CFLAGS=-I/home/modiml/anaconda3/envs/hdrnet/lib/python3.7/site-packages/tensorflow/include -D_GLIBCXX_USE_CXX11_ABI=1
+TF_LFLAGS=-L/home/modiml/anaconda3/envs/hdrnet/lib/python3.7/site-packages/tensorflow -ltensorflow_framework
 CUDA_HOME ?= /usr/local/cuda
 
 SRC_DIR = ops
@@ -9,10 +9,9 @@ LIB_DIR = lib
 
 CC = c++ -std=c++11
 NVCC = nvcc -std c++11
-CFLAGS = -fPIC -I$(TF_INC) -O2 -D_GLIBCXX_USE_CXX11_ABI=0
-LDFLAGS = -L$(CUDA_HOME)/lib64 -lcudart
-NVFLAGS = -DGOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -I$(TF_INC) \
-					-expt-relaxed-constexpr -Wno-deprecated-gpu-targets -ftz=true
+CFLAGS = -fPIC $(TF_CFLAGS) -O2
+LDFLAGS = -L$(CUDA_HOME)/lib64 -lcudart $(TF_LFLAGS)
+NVFLAGS = -DGOOGLE_CUDA=1 -x cu -Xcompiler -fPIC $(TF_CFLAGS) --expt-relaxed-constexpr -Wno-deprecated-gpu-targets -ftz=true
 
 
 SRC = bilateral_slice.cc
@@ -28,6 +27,8 @@ $(LIB_DIR)/hdrnet_ops.so: $(CUDA_OBJ) $(LIB_DIR) $(SRCS)
 
 # Cuda kernels
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc $(BUILD_DIR)
+	@echo $(TF_LFLAGS)
+	@echo $(TF_CFLAGS)
 	$(NVCC) -c  $< -o $@ $(NVFLAGS)
 
 $(BUILD_DIR):

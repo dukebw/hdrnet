@@ -190,8 +190,8 @@ if __name__ == '__main__':
   # pylint: disable=line-too-long
   # ----------------------------------------------------------------------------
   req_grp = parser.add_argument_group('required')
-  req_grp.add_argument('checkpoint_dir', default=None, help='directory to save checkpoints to.')
-  req_grp.add_argument('data_dir', default=None, help='input directory containing the training .tfrecords or images.')
+  req_grp.add_argument('--checkpoint_dir', default=None, help='directory to save checkpoints to.')
+  req_grp.add_argument('--data_dir', default=None, help='input directory containing the training .tfrecords or images.')
   req_grp.add_argument('--eval_data_dir', default=None, type=str, help='directory with the validation data.')
 
   # Training, logging and checkpointing parameters

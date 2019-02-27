@@ -95,7 +95,7 @@ def main(args):
     for t in transfer:
       if "BatchNorm/beta" in transfer[t]:
         transfer[t] = transfer[t].replace("BatchNorm/beta", "biases")
-        print t, transfer[t]
+        print(t, transfer[t])
 
   # Prepare a random input image
   test_data = np.random.rand(256, 256, 3).astype(np.float32)
@@ -120,25 +120,25 @@ def main(args):
 
     reject = re.compile(r".*(Adam|global_step|beta1_power|beta2_power|learning_rate|ExponentialMovingAverage|moving_mean|moving_variance).*")
     overrides = {}
-    print "Fetching source variables tensors"
+    print("Fetching source variables tensors")
     for v in tf.global_variables():
       if reject.match(v.name):
         continue
       value = sess.run(v)
 
-      if v.name in transfer.keys():
+      if v.name in list(transfer.keys()):
         # Take into account updated guide implementation
         if "channel_mixing/biases" in v.name:
           overrides[transfer[v.name]] = value + 0.5/8.0
-          print "channel mix", value + 0.5/8.0, value
+          print("channel mix", value + 0.5/8.0, value)
         elif "channel_mixing/weights" in v.name:
           overrides[transfer[v.name]] = value*(8.0-1.0)/8.0
-          print "channel mix", value*(8.0-1.0)/8.0, value
+          print("channel mix", value*(8.0-1.0)/8.0, value)
         else:
           overrides[transfer[v.name]] = value
-      elif v.name in transfer_sum.keys():
+      elif v.name in list(transfer_sum.keys()):
         dst = transfer_sum[v.name]
-        if dst in overrides.keys():
+        if dst in list(overrides.keys()):
           overrides[dst] += value
         else:
           overrides[dst] = value
@@ -168,20 +168,20 @@ def main(args):
   with tf.Session(config=config) as sess:
     tf.global_variables_initializer().run()
 
-    print "Overriding target tensors"
+    print("Overriding target tensors")
     for v in overrides:
-      print v
+      print(v)
       var = tf.get_default_graph().get_tensor_by_name(v)
       assign_op = tf.assign(var, overrides[v])
       sess.run(assign_op)
 
-    print "Batch norm and moving averages:"
+    print("Batch norm and moving averages:")
     for v in tf.global_variables():
       if 'moving_variance' in v.name or 'moving_mean' in v.name or 'BatchNorm/beta' in v.name:
         var = tf.get_default_graph().get_tensor_by_name(v.name)
         var = sess.run(var)
-        print v.name, np.mean(np.ravel(var)), np.std(np.ravel(var))
-    print "Batch norm constants:"
+        print(v.name, np.mean(np.ravel(var)), np.std(np.ravel(var)))
+    print("Batch norm constants:")
 
     feed_dict = {}
     # for v in tf.get_default_graph().as_graph_def().node:
@@ -190,7 +190,7 @@ def main(args):
     #     var = tf.get_default_graph().get_tensor_by_name(v.name+":0")
     #     feed_dict[var] = 0.0
 
-    print "Evaluating test tensors for the destination"
+    print("Evaluating test tensors for the destination")
     feed_dict[input_t] = input_batch_dst
     feed_dict[input_t_fr] = input_batch_dst
     # test_result_dst = sess.run(test_dst, feed_dict=feed_dict)
@@ -202,7 +202,7 @@ def main(args):
     #   assert (diff < 1e-5)
 
     new_path = os.path.join(os.path.dirname(dst_path), 'upgraded_from_sig2017.ckpt')
-    print "Saving checkpoint:", new_path
+    print("Saving checkpoint:", new_path)
     if not os.path.exists(args.dst):
       os.makedirs(args.dst)
     dst_saver.save(sess, new_path, global_step=0)

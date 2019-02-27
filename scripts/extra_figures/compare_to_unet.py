@@ -12,7 +12,7 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 
-print plt.style.available
+print(plt.style.available)
 plt.style.use('seaborn-paper')
 
 psnr = {
