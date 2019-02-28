@@ -11,8 +11,7 @@ CC = c++ -std=c++11
 NVCC = nvcc -std c++11
 CFLAGS = -fPIC $(TF_CFLAGS) -O2
 LDFLAGS = -L$(CUDA_HOME)/lib64 -lcudart $(TF_LFLAGS)
-NVFLAGS = -DGOOGLE_CUDA=1 -x cu -Xcompiler -fPIC $(TF_CFLAGS) --expt-relaxed-constexpr -Wno-deprecated-gpu-targets -ftz=true
-
+NVFLAGS = -DGOOGLE_CUDA=1 -x cu -Xcompiler -fPIC $(TF_CFLAGS) -I$(SRC_DIR) --expt-relaxed-constexpr -Wno-deprecated-gpu-targets -ftz=true --ptxas-options=-v -lineinfo
 
 SRC = bilateral_slice.cc
 CUDA_SRC = bilateral_slice.cu.cc
