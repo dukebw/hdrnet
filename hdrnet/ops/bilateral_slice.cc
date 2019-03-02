@@ -37,10 +37,10 @@ REGISTER_OP("BilateralSliceGrad")
   .Output("guide_grad: float");
 
 REGISTER_OP("BilateralSliceApply")
+  .Attr("has_offset: bool")
   .Input("grid: float")
   .Input("guide: float")
   .Input("input: float")
-  .Attr("has_offset: bool")
   .Output("out: float")
   .Doc(R"doc(
 Slices input in in the location defined by guide and apply it, to produce output.
@@ -188,8 +188,18 @@ class BilateralSliceGradOp : public OpKernel {
     OP_REQUIRES_OK(context, context->allocate_output(1, guide_shape,
                                                      &guide_grad));
 
-    const int64 *grid_size = bilateral_grid.shape().dim_sizes().data();
-    const int64 *guide_size = guide.shape().dim_sizes().data();
+    const int64 grid_size[] {
+      bilateral_grid.dim_size(0),
+      bilateral_grid.dim_size(1),
+      bilateral_grid.dim_size(2),
+      bilateral_grid.dim_size(3),
+      bilateral_grid.dim_size(4)
+    };
+    const int64 guide_size[] {
+      guide.dim_size(0),
+      guide.dim_size(1),
+      guide.dim_size(2)
+    };
 
     auto grid_grad_array = grid_grad->template flat<float>();
     auto guide_grad_array = guide_grad->template flat<float>();
@@ -211,12 +221,9 @@ class BilateralSliceGradOp : public OpKernel {
 
 
 class BilateralSliceApplyOp : public OpKernel {
-  private:
-    bool has_offset;
-
   public:
     explicit BilateralSliceApplyOp(OpKernelConstruction* context) : OpKernel(context) {
-      OP_REQUIRES_OK(context, context->GetAttr("has_offset", &has_offset));
+      OP_REQUIRES_OK(context, context->GetAttr("has_offset", &has_offset_));
     }
 
     void Compute(OpKernelContext* context) override {
@@ -240,8 +247,6 @@ class BilateralSliceApplyOp : public OpKernel {
             R"msg(Guide image should be 4D (batch, height, width, nchannels))msg"));
 
       // Sizes
-      const int64 *grid_size = bilateral_grid.shape().dim_sizes().data();
-      const int64 *guide_size = guide.shape().dim_sizes().data();
       int h = guide.dim_size(1);
       int w = guide.dim_size(2);
       int bs = bilateral_grid.dim_size(0);
@@ -261,7 +266,7 @@ class BilateralSliceApplyOp : public OpKernel {
             R"msg(Batch sizes should match.)msg"));
 
       int output_chans = 0;
-      if (has_offset) {
+      if (has_offset_) {
         OP_REQUIRES(
             context, coeffs_chans % (input_chans+1) == 0,
             errors::InvalidArgument(
@@ -289,7 +294,7 @@ class BilateralSliceApplyOp : public OpKernel {
       bool status = BilateralSliceApplyKernelLauncher(
           context->eigen_device<GPUDevice>(),
           bs, gh, gw, gd, 
-          input_chans, output_chans, has_offset,
+          input_chans, output_chans, has_offset_,
           h, w,
           bilateral_grid.flat<float>().data(), guide.flat<float>().data(), input.flat<float>().data(),
           output.data());
@@ -299,6 +304,9 @@ class BilateralSliceApplyOp : public OpKernel {
             errors::Internal("Failed to launch BilateralSliceApplyKernel."));
       }
     }
+  private:
+    TF_DISALLOW_COPY_AND_ASSIGN(BilateralSliceApplyOp);
+    bool has_offset_;
 };
 
 class BilateralSliceApplyGradOp : public OpKernel {
